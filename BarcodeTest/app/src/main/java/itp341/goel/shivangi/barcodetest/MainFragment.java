@@ -12,10 +12,21 @@ import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.TextView;
 
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.VolleyLog;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.gms.vision.barcode.Barcode;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
 import java.util.Random;
+
+import itp341.goel.shivangi.barcodetest.Model.ProductSingleton;
 
 /**
  * Created by Shivangi on 12/6/2016.
@@ -137,7 +148,10 @@ public class MainFragment extends Fragment {
                     Barcode barcode = data.getParcelableExtra(BarcodeCaptureActivity.BarcodeObject);
                     statusMessage.setText(R.string.barcode_success);
                     barcodeValue.setText(barcode.displayValue);
-                    barcodeFormat.setText(Integer.toString(barcode.describeContents()));
+                    //String url = "http://api.androidhive.info/volley/person_object.json";
+                    String url = "https://api.upcitemdb.com/prod/trial/lookup?upc="+barcode.displayValue;
+                    volleyJsonObjectRequest(url);
+
 
                     Random r = new Random();
                     int num = r.nextInt(2);
@@ -159,6 +173,48 @@ public class MainFragment extends Fragment {
 //        else {
 //            super.onActivityResult(requestCode, resultCode, data);
 //        }
+
+    }
+
+    public void volleyJsonObjectRequest(String url){
+
+        String REQUEST_TAG = "volleyJsonObjectRequest";
+
+
+        JsonObjectRequest jsonObjectReq = new JsonObjectRequest(url, null,
+            new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+                    Log.d(TAG, response.toString());
+
+                    try {
+                        String ok = (String) response.get("code");
+                        if(ok.equals("OK")){
+                            JSONArray jArray = response.getJSONArray("items");
+                            JSONObject jObj = jArray.getJSONObject(0);
+                            String brand = jObj.getString("brand");
+                            barcodeFormat.setText(brand);
+                        }
+                        else{
+                            barcodeFormat.setText("not OK");
+                        }
+                    }catch(JSONException e){
+                        e.printStackTrace();
+                    }
+
+
+
+                }
+            }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                VolleyLog.d(TAG, "Error: " + error.getMessage());
+
+            }
+        });
+
+        // Adding JsonObject request to request queue
+        ProductSingleton.getInstance(this.getContext()).addToRequestQueue(jsonObjectReq,REQUEST_TAG);
 
     }
 }
